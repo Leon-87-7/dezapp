@@ -1,7 +1,8 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -40,7 +41,10 @@ export async function POST(req: Request) {
   }
 
   const eventType = evt.type;
-  const supabase = createAdminClient();
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   try {
     switch (eventType) {
@@ -50,16 +54,17 @@ export async function POST(req: Request) {
         const email = email_addresses[0]?.email_address || "";
         const name = [first_name, last_name].filter(Boolean).join(" ") || null;
 
-        const { error } = await supabase
-          .from("users")
-          .upsert({
-            clerk_user_id: id,
-            email,
-            name,
-            avatar_url: image_url || null,
-          }, {
-            onConflict: "clerk_user_id",
-          });
+        const userData = {
+          clerk_user_id: id,
+          email,
+          name,
+          avatar_url: image_url || null,
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from("users") as any).upsert(userData, {
+          onConflict: "clerk_user_id",
+        });
 
         if (error) {
           console.error("Error upserting user:", error);
@@ -71,8 +76,8 @@ export async function POST(req: Request) {
       case "user.deleted": {
         const { id } = evt.data;
         if (id) {
-          const { error } = await supabase
-            .from("users")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error } = await (supabase.from("users") as any)
             .delete()
             .eq("clerk_user_id", id);
 
@@ -87,16 +92,17 @@ export async function POST(req: Request) {
       case "organization.updated": {
         const { id, name, slug, image_url } = evt.data;
 
-        const { error } = await supabase
-          .from("organizations")
-          .upsert({
-            clerk_org_id: id,
-            name,
-            slug,
-            logo_url: image_url || null,
-          }, {
-            onConflict: "clerk_org_id",
-          });
+        const orgData = {
+          clerk_org_id: id,
+          name: name || "",
+          slug: slug || "",
+          logo_url: image_url || null,
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from("organizations") as any).upsert(orgData, {
+          onConflict: "clerk_org_id",
+        });
 
         if (error) {
           console.error("Error upserting organization:", error);
@@ -108,8 +114,8 @@ export async function POST(req: Request) {
       case "organization.deleted": {
         const { id } = evt.data;
         if (id) {
-          const { error } = await supabase
-            .from("organizations")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error } = await (supabase.from("organizations") as any)
             .delete()
             .eq("clerk_org_id", id);
 
@@ -124,28 +130,29 @@ export async function POST(req: Request) {
         const { organization, public_user_data, role } = evt.data;
 
         // Get user and org IDs from Supabase
-        const { data: user } = await supabase
-          .from("users")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: user } = await (supabase.from("users") as any)
           .select("id")
           .eq("clerk_user_id", public_user_data.user_id)
           .single();
 
-        const { data: org } = await supabase
-          .from("organizations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: org } = await (supabase.from("organizations") as any)
           .select("id")
           .eq("clerk_org_id", organization.id)
           .single();
 
         if (user && org) {
-          const { error } = await supabase
-            .from("org_members")
-            .upsert({
-              org_id: org.id,
-              user_id: user.id,
-              role: role === "org:admin" ? "admin" : "member",
-            }, {
-              onConflict: "org_id,user_id",
-            });
+          const memberData = {
+            org_id: org.id,
+            user_id: user.id,
+            role: role === "org:admin" ? "admin" : "member",
+          };
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error } = await (supabase.from("org_members") as any).upsert(memberData, {
+            onConflict: "org_id,user_id",
+          });
 
           if (error) {
             console.error("Error adding org member:", error);
@@ -157,21 +164,21 @@ export async function POST(req: Request) {
       case "organizationMembership.deleted": {
         const { organization, public_user_data } = evt.data;
 
-        const { data: user } = await supabase
-          .from("users")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: user } = await (supabase.from("users") as any)
           .select("id")
           .eq("clerk_user_id", public_user_data.user_id)
           .single();
 
-        const { data: org } = await supabase
-          .from("organizations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: org } = await (supabase.from("organizations") as any)
           .select("id")
           .eq("clerk_org_id", organization.id)
           .single();
 
         if (user && org) {
-          const { error } = await supabase
-            .from("org_members")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error } = await (supabase.from("org_members") as any)
             .delete()
             .eq("org_id", org.id)
             .eq("user_id", user.id);
