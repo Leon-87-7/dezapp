@@ -4,6 +4,17 @@ import { WebhookEvent } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
+/**
+ * Handle Clerk webhook events and synchronize corresponding Supabase records.
+ *
+ * Verifies the webhook signature using CLERK_WEBHOOK_SECRET, processes events
+ * such as user and organization create/update/delete and organization membership
+ * changes, and upserts or deletes rows in the users, organizations, and org_members
+ * tables as appropriate.
+ *
+ * @returns `Response` with status 200 when the webhook is processed successfully,
+ * 400 for missing/invalid webhook data or signature, or 500 for internal server errors.
+ */
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
