@@ -1,0 +1,22 @@
+{
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "tailwindCSS.experimental.configFile": "./src/app/globals.css",
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "ngClass",
+    "classNames"
+  ],
+  "editor.inlineSuggest.enabled": true,
+  "css.validate": false,
+  "tailwindCSS.emmetCompletions": true
+}
